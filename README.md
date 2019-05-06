@@ -18,7 +18,7 @@ $ oc label secret certisign-git-ssh-secret jenkins.openshift.io/secret.name=cert
 
 ![image-20190503124255395](./img/image-20190503124255395.png)
 
-![image-20190503124355774](/Users/rfelix/poc/OPENSHIFT/hello-openshift-jenkins-ci-cd/img/image-20190503124355774.png)
+![image-20190503124355774](./img/image-20190503124355774.png)
 
 
 
