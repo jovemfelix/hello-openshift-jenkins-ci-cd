@@ -1,96 +1,67 @@
-# To create a Jenkins pipeline at Openshif
+## Cria configuração Secret
 
+```shell
+$ oc create secret generic certisign-git-ssh-secret \
+    --from-literal=username=<user_name> \
+    --from-literal=password=<password> \
+    --type=kubernetes.io/basic-auth
+    
+# habilitar syncronismo com jenkins
+$ oc label secret certisign-git-ssh-secret credential.sync.jenkins.openshift.io=true
 
-
-## Login
-
-```ruby
-oc login -u developer -p 123
+$ oc label secret certisign-git-ssh-secret jenkins.openshift.io/secret.name=certisign-git-ssh-secret
 ```
 
 
 
-## Create a demo project
+### Screen
 
-```ruby
-oc new-project hello-openshift-jenkins-ci-cd
+![image-20190503124255395](./img/image-20190503124255395.png)
+
+![image-20190503124355774](/Users/rfelix/poc/OPENSHIFT/hello-openshift-jenkins-ci-cd/img/image-20190503124355774.png)
+
+
+
+## Criar template Jenkins
+
+```
+oc process -f jenkins-sync-secret.yml -p APPLICATION_NAME=hello | oc create -f -
 ```
 
 
 
-## create file BuildConfig :
+![image-20190506103715132](./img/image-20190506103715132.png)
 
-```json
-apiVersion: v1
-kind: BuildConfig
-metadata:
-  name: hello-openshift-jenkins-ci-cd
-  labels:
-    name: hello
-spec:
-  source:       
-    git:   
-      ref: master       
-      uri: https://github.com/jovemfelix/hello-openshift-jenkins-ci-cd
-  runPolicy: Serial
-  strategy:
-    type: JenkinsPipeline
-    jenkinsPipelineStrategy:
-      jenkinsfilePath: Jenkinsfile
+![image-20190506104007093](./img/image-20190506104007093.png)
 
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  name: jenkins-agent
-  labels:
-    role: jenkins-slave
-data:
-  template1: |-
-    <org.csanchez.jenkins.plugins.kubernetes.PodTemplate>
-      <inheritFrom></inheritFrom>
-      <name>template1</name>
-      <instanceCap>2147483647</instanceCap>
-      <idleMinutes>0</idleMinutes>
-      <label>template1</label>
-      <serviceAccount>jenkins</serviceAccount>
-      <nodeSelector></nodeSelector>
-      <volumes/>
-      <containers>
-        <org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate>
-          <name>jnlp</name>
-          <image>openshift/jenkins-agent-maven-35-centos7:v3.10</image>
-          <privileged>false</privileged>
-          <alwaysPullImage>true</alwaysPullImage>
-          <workingDir>/tmp</workingDir>
-          <command></command>
-          <args>${computer.jnlpmac} ${computer.name}</args>
-          <ttyEnabled>false</ttyEnabled>
-          <resourceRequestCpu></resourceRequestCpu>
-          <resourceRequestMemory></resourceRequestMemory>
-          <resourceLimitCpu></resourceLimitCpu>
-          <resourceLimitMemory></resourceLimitMemory>
-          <envVars/>
-        </org.csanchez.jenkins.plugins.kubernetes.ContainerTemplate>
-      </containers>
-      <envVars/>
-      <annotations/>
-      <imagePullSecrets/>
-      <nodeProperties/>
-    </org.csanchez.jenkins.plugins.kubernetes.PodTemplate>
+
+
+### Iniciar o Build
+
+```shell
+# verificar o nome do build
+$ oc get bc
+NAME             TYPE              FROM      LATEST
+hello-pipeline   JenkinsPipeline             0
+
+# iniciar
+$ oc start-build hello-pipeline
+build.build.openshift.io/hello-pipeline-1 started
 ```
 
 
 
-### To create run
+![image-20190506104212619](./img/image-20190506104212619.png)
 
-```ruby
-oc apply -f jenkins.yaml
+```shell
+# vejas os logs
+$ oc logs -f bc/hello-pipeline
+info: logs available at /https://jenkins-teste.apps.na311.openshift.opentlc.com/blue/organizations/jenkins/teste%2Fteste-hello-pipeline/detail/teste-hello-pipeline/1/
 ```
 
+![image-20190506104504358](./img/image-20190506104504358.png)
 
+## Referência
 
-## Reference
-
-- https://opensource.com/article/18/11/best-practices-cicd
-- https://www.infoq.com/articles/scaling-docker-with-kubernetes
-- https://github.com/jenkinsci/kubernetes-plugin
+- https://github.com/openshift/jenkins-sync-plugin
+- https://docs.openshift.com/container-platform/3.11/dev_guide/builds/build_inputs.html
